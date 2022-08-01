@@ -1,13 +1,13 @@
-import app from "../src/app.js";
+import app from "../../src/app.js";
 import supertest from "supertest";
-import { prisma } from "../src/database.js";
-import bodyNewRecomendation from "./Factories/newRecommendationFactories.js";
+import { prisma } from "../../src/database.js";
+import bodyNewRecomendation from "../Factories/newRecommendationFactories.js";
 
 beforeEach(async ()=> {
     await prisma.$executeRaw`DELETE FROM recommendations WHERE name = 'Falamansa - Xote dos Milagres'`
 })
 
-describe("New Recommendation", ()=> {
+describe("New Recommendation (/recommendation)", ()=> {
     it("create new recommendation", async ()=> {
         const response = await supertest(app).post("/recommendations").send(bodyNewRecomendation());
         const status = response.status;
@@ -21,7 +21,7 @@ describe("New Recommendation", ()=> {
         expect(recommendationExist).not.toBeNull()
     })
 
-    it("name isn't a unique string", async ()=> {
+    it("name isn't a unique string", async () => {
         await supertest(app).post("/recommendations").send(bodyNewRecomendation());
         const response = await supertest(app).post("/recommendations").send(bodyNewRecomendation());
         const status = response.status;
@@ -29,7 +29,7 @@ describe("New Recommendation", ()=> {
         expect(status).toEqual(409);
     })
 
-    it("name isn't a string and youtube link must be a link", async() => {
+    it("name isn't a string and youtube link ins't a link", async() => {
         const nameNumber = await supertest(app).post("/recommendations").send({
             name: 1,
             youtubeLink: "https://www.youtube.com/watch?v=chwyjJbcs1Y"
@@ -42,9 +42,21 @@ describe("New Recommendation", ()=> {
         });
         expect(wrongYoutubeLink.status).toEqual(422);
 
+        const nameDoesNotExist = await supertest(app).post("/recommendations").send({
+            name: "",
+            youtubeLink: "https://www.youtube.com/watch?v=chwyjJbcs1Y"
+        });
+        expect(nameDoesNotExist.status).toEqual(422);
+
+        const youtubeLinkDoesNotExist = await supertest(app).post("/recommendations").send({
+            name: "Falamansa - Xote dos Milagres",
+            youtubeLink: ""
+        });
+        expect(youtubeLinkDoesNotExist.status).toEqual(422);
+
     })
 })
 
-afterAll(async ()=> {
+afterAll(async () => {
     await prisma.$disconnect()
 })
